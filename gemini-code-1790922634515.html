@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>1st Tranche Calculator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            deped: {
+              navy: '#002060',
+              blue: '#0056B3',
+              lightbg: '#F4F7FA',
+              red: '#C00000',
+              gold: '#FFC000',
+              golddark: '#D49B00',
+              goldlight: '#FFF8E7'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Hide up/down spinner arrows for number inputs */
+    input[type=number]::-webkit-inner-spin-button, 
+    input[type=number]::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    input[type=number] {
+      -moz-appearance: textfield;
+      appearance: textfield;
+    }
+
+    /* Print styling specifically tailored for Landscape report printing */
+    @media print {
+      @page {
+        size: landscape;
+        margin: 8mm;
+      }
+      body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        padding: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .container-box {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 0 !important;
+      }
+      table {
+        font-size: 10px !important;
+        width: 100% !important;
+      }
+      th, td {
+        padding: 4px 6px !important;
+      }
+      input {
+        border: none !important;
+        background: transparent !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen p-4 md:p-8">
+
+  <div class="max-w-7xl mx-auto space-y-6">
+    
+    <!-- Header with Action Buttons -->
+    <div class="bg-white p-5 rounded-xl shadow-md border-t-4 border-deped-navy flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-4">
+        <div>
+          <h1 class="text-2xl font-black tracking-tight text-deped-navy">1st Tranche Calculator</h1>
+          <p class="text-xs font-medium text-slate-500 uppercase tracking-wider">Department of Education • Republic of the Philippines</p>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="no-print flex flex-wrap items-center gap-2">
+        <button onclick="switchMode('WITH_SF')" id="btn-mode-sf" class="px-3 py-2 rounded-lg text-xs font-bold border transition shadow-xs">
+          With Furniture
+        </button>
+        <button onclick="switchMode('WITHOUT_SF')" id="btn-mode-nosf" class="px-3 py-2 rounded-lg text-xs font-bold border transition shadow-xs">
+          Without Furniture
+        </button>
+        <button onclick="window.print()" class="px-3 py-2 bg-deped-navy text-white rounded-lg text-xs font-bold hover:bg-blue-900 transition flex items-center gap-1 shadow-xs">
+          🖨️ Print Landscape
+        </button>
+        <button onclick="exportCSV()" class="px-3 py-2 bg-emerald-700 text-white rounded-lg text-xs font-bold hover:bg-emerald-800 transition flex items-center gap-1 shadow-xs">
+          📊 Export CSV
+        </button>
+        <button onclick="clearAllData()" class="px-3 py-2 bg-rose-50 border border-rose-200 text-deped-red rounded-lg text-xs font-bold hover:bg-rose-100 transition">
+          🗑️ Clear All
+        </button>
+      </div>
+    </div>
+
+    <!-- Main Sheet Container -->
+    <div class="bg-white p-6 rounded-xl shadow-md border border-slate-200 space-y-6 container-box">
+      
+      <!-- LGU Input and Summary Header Cards -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center border-b border-slate-200 pb-6">
+        
+        <!-- LGU Name Input -->
+        <div class="lg:col-span-3">
+          <label class="block text-xs font-bold uppercase tracking-wider text-deped-navy mb-1">LGU Name</label>
+          <input type="text" id="lgu-name" placeholder="Enter LGU Name (e.g. Province / Municipality)" class="w-full border-slate-300 border rounded-lg px-3 py-2 text-sm font-semibold focus:ring-2 focus:ring-deped-blue outline-none">
+        </div>
+
+        <!-- Metric Summary Cards -->
+        <div class="lg:col-span-9 grid grid-cols-2 md:grid-cols-5 gap-3 text-center">
+          
+          <!-- Total ABC Amount -->
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-[10px] font-bold text-slate-500 block uppercase tracking-wider">Total ABC Amount</span>
+            <span id="summary-abc" class="text-sm md:text-base font-extrabold text-slate-800">₱0.00</span>
+          </div>
+
+          <!-- Total RTA Amount -->
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 shadow-sm">
+            <span class="text-[10px] font-bold text-slate-500 block uppercase tracking-wider">Total RTA Amount</span>
+            <span id="summary-rta" class="text-sm md:text-base font-extrabold text-slate-800">₱0.00</span>
+          </div>
+
+          <!-- HIGHLIGHTED: Total Fund Allocation -->
+          <div class="bg-amber-500 text-slate-900 p-3 rounded-xl border-2 border-amber-600 shadow-md">
+            <span class="text-[10px] font-black text-slate-900 uppercase tracking-wider block">Total Fund Alloc.</span>
+            <span id="summary-alloc" class="text-base md:text-lg font-black text-slate-950">₱0.00</span>
+          </div>
+
+          <!-- HIGHLIGHTED: 1st Tranche Fund Allocation -->
+          <div class="bg-deped-navy text-white p-3 rounded-xl border-2 border-deped-gold shadow-md">
+            <span class="text-[10px] font-bold text-deped-gold block uppercase tracking-wider">1st Tranche Fund</span>
+            <span id="summary-tranche" class="text-base md:text-lg font-black text-white">₱0.00</span>
+          </div>
+
+          <!-- Validation Check Status -->
+          <div id="status-badge-card" class="p-3 rounded-xl border bg-emerald-50 border-emerald-200 text-emerald-800 flex flex-col justify-center items-center shadow-sm">
+            <span class="text-[10px] font-bold block uppercase tracking-wider">Validation Check</span>
+            <span id="summary-status" class="text-xs md:text-sm font-black">VALID / PASS</span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Excel Copy & Paste Hint -->
+      <div class="no-print text-xs text-slate-600 bg-amber-50/70 p-3 rounded-lg border border-amber-200 flex items-center justify-between gap-2">
+        <div>
+          <span class="font-bold text-deped-navy">💡 Excel Copy & Paste Supported:</span> 
+          Copy multiple rows directly from Microsoft Excel or Google Sheets (containing School Name, # of CL, ABC Amount, and RTA Amount) and press <kbd class="px-1.5 py-0.5 text-[10px] bg-white border border-slate-300 rounded shadow-xs font-semibold">Ctrl+V</kbd> / <kbd class="px-1.5 py-0.5 text-[10px] bg-white border border-slate-300 rounded shadow-xs font-semibold">Cmd+V</kbd> into any table input cell.
+        </div>
+      </div>
+
+      <!-- Data Table Section -->
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-deped-navy text-white uppercase text-[11px] tracking-wider">
+              <th class="p-3">School Name</th>
+              <th class="p-3 text-center w-24"># CL</th>
+              <th class="p-3 text-right">ABC Amount</th>
+              <th class="p-3 text-right">RTA Amount</th>
+              <th id="th-sf" class="p-3 text-right">School Furniture</th>
+              <th id="th-rta-sf" class="p-3 text-right">RTA less SF</th>
+              <th class="p-3 text-right">EAO (LGU)</th>
+              <th class="p-3 text-right bg-amber-500 text-slate-950 font-black border-x border-amber-600">Total Fund Alloc</th>
+              <th class="p-3 text-right bg-deped-blue text-deped-gold font-bold">1st Tranche Alloc</th>
+              <th class="p-3 text-center no-print w-12">Action</th>
+            </tr>
+          </thead>
+          <tbody id="school-table-body" class="divide-y divide-slate-200">
+            <!-- Dynamic School Rows -->
+          </tbody>
+          <tfoot>
+            <tr class="bg-deped-navy text-white font-bold text-xs">
+              <td class="p-3 uppercase">Grand Total</td>
+              <td id="total-cl" class="p-3 text-center">0</td>
+              <td id="total-abc" class="p-3 text-right">₱0.00</td>
+              <td id="total-rta" class="p-3 text-right">₱0.00</td>
+              <td id="total-sf" class="p-3 text-right">₱0.00</td>
+              <td id="total-rta-sf" class="p-3 text-right">₱0.00</td>
+              <td id="total-eao" class="p-3 text-right">₱0.00</td>
+              <td id="total-project-alloc" class="p-3 text-right bg-amber-400 text-slate-950 font-black text-sm border-x border-amber-500">₱0.00</td>
+              <td id="total-tranche-alloc" class="p-3 text-right bg-deped-blue text-deped-gold text-sm font-black">₱0.00</td>
+              <td class="p-3 no-print"></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <!-- Add Row Button -->
+      <div class="no-print flex justify-start">
+        <button onclick="addNewRow()" class="px-4 py-2 bg-deped-blue hover:bg-blue-800 text-white text-xs font-bold rounded-lg transition flex items-center gap-1 shadow-sm">
+          ➕ Add New School
+        </button>
+      </div>
+
+      <!-- Footnote Explanation: How 1st Tranche Fund is Calculated -->
+      <div class="border-t border-slate-200 pt-5 text-xs text-slate-600 space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="font-bold text-deped-navy text-sm uppercase tracking-wider flex items-center gap-1.5">
+            <span>📐</span> How the 1st Tranche Fund is Calculated
+          </h3>
+          <button onclick="toggleFormulaDetails()" id="btn-toggle-formula" class="no-print text-xs text-deped-blue font-bold hover:underline flex items-center gap-1">
+            <span id="toggle-icon">▲</span> <span id="toggle-text">Hide Details</span>
+          </button>
+        </div>
+        
+        <div id="formula-container" class="space-y-3 transition-all">
+          
+          <!-- Mode A Formula (With School Furniture) -->
+          <div id="formula-with-sf" class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2">
+            <span class="font-bold text-deped-navy block border-b border-slate-200 pb-1">Mode: With School Furniture (WITH_SF)</span>
+            <ul class="space-y-1.5 text-[11px] list-disc list-inside text-slate-700">
+              <li><strong class="text-slate-900">School Furniture:</strong> <code># of CL × ₱154,000</code></li>
+              <li><strong class="text-slate-900">RTA less SF:</strong> <code>RTA Amount - School Furniture</code></li>
+              <li><strong class="text-slate-900">EAO (LGU):</strong> <code>(RTA Amount - School Furniture) × 0.25%</code></li>
+              <li><strong class="text-slate-900 font-bold bg-amber-100 px-1 rounded">Total Fund Allocation:</strong> <code>RTA Amount + EAO (LGU)</code></li>
+              <li class="p-2 bg-amber-50 text-deped-navy font-semibold rounded border border-amber-200">
+                🎯 <strong>1st Tranche Fund Allocation:</strong><br>
+                <code>(50% × RTA Amount) + EAO (LGU)</code>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Mode B Formula (Without School Furniture) -->
+          <div id="formula-without-sf" class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2 hidden">
+            <span class="font-bold text-deped-navy block border-b border-slate-200 pb-1">Mode: Without School Furniture (WITHOUT_SF)</span>
+            <ul class="space-y-1.5 text-[11px] list-disc list-inside text-slate-700">
+              <li><strong class="text-slate-900">School Furniture:</strong> <code>₱0.00</code></li>
+              <li><strong class="text-slate-900">EAO (LGU):</strong> <code>RTA Amount × 0.25%</code></li>
+              <li><strong class="text-slate-900 font-bold bg-amber-100 px-1 rounded">Total Fund Allocation:</strong> <code>RTA Amount + EAO (LGU)</code></li>
+              <li class="p-2 bg-amber-50 text-deped-navy font-semibold rounded border border-amber-200">
+                🎯 <strong>1st Tranche Fund Allocation:</strong><br>
+                <code>(50% × RTA Amount) + EAO (LGU)</code>
+              </li>
+            </ul>
+          </div>
+
+          <div class="text-[11px] text-slate-500 italic">
+            * <strong>Validation Condition:</strong> The calculation is considered <strong>VALID / PASS</strong> if Total Fund Allocation ≤ Total ABC Amount.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let currentMode = 'WITH_SF'; // Default Mode: WITH_SF or WITHOUT_SF
+    let isFormulaVisible = true;
+    const SF_RATE_PER_CL = 154000;
+    const EAO_RATE = 0.0025;
+    const TRANCHE_RATE = 0.5;
+
+    // Default initial dataset with 1 empty row
+    let schoolData = [
+      { id: Date.now(), name: '', cl: '', abc: '', rta: '' }
+    ];
+
+    function toggleFormulaDetails() {
+      isFormulaVisible = !isFormulaVisible;
+      const container = document.getElementById('formula-container');
+      const icon = document.getElementById('toggle-icon');
+      const text = document.getElementById('toggle-text');
+
+      if (isFormulaVisible) {
+        container.style.display = 'block';
+        icon.innerText = '▲';
+        text.innerText = 'Hide Details';
+      } else {
+        container.style.display = 'none';
+        icon.innerText = '▼';
+        text.innerText = 'Show Details';
+      }
+    }
+
+    function parseNum(val) {
+      if (!val) return 0;
+      const clean = String(val).replace(/,/g, '').replace(/₱/g, '').trim();
+      const parsed = parseFloat(clean);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+
+    function formatNumberWithCommas(val) {
+      if (val === '' || val === null || val === undefined) return '';
+      const clean = String(val).replace(/,/g, '').replace(/₱/g, '').trim();
+      if (clean === '') return '';
+      
+      const parts = clean.split('.');
+      parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+      return parts.join('.');
+    }
+
+    function formatCurrency(val) {
+      return '₱' + Number(val || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function switchMode(mode) {
+      currentMode = mode;
+      
+      document.getElementById('btn-mode-sf').className = mode === 'WITH_SF' 
+        ? 'px-3 py-2 rounded-lg text-xs font-bold bg-deped-navy text-white border-deped-navy shadow-xs' 
+        : 'px-3 py-2 rounded-lg text-xs font-bold bg-white text-slate-700 border-slate-300 hover:bg-slate-50';
+      
+      document.getElementById('btn-mode-nosf').className = mode === 'WITHOUT_SF' 
+        ? 'px-3 py-2 rounded-lg text-xs font-bold bg-deped-navy text-white border-deped-navy shadow-xs' 
+        : 'px-3 py-2 rounded-lg text-xs font-bold bg-white text-slate-700 border-slate-300 hover:bg-slate-50';
+
+      const sfHeader = document.getElementById('th-sf');
+      const rtaSfHeader = document.getElementById('th-rta-sf');
+      const sfTotal = document.getElementById('total-sf');
+      const rtaSfTotal = document.getElementById('total-rta-sf');
+
+      const formulaWithSf = document.getElementById('formula-with-sf');
+      const formulaWithoutSf = document.getElementById('formula-without-sf');
+
+      if (mode === 'WITHOUT_SF') {
+        sfHeader.style.display = 'none';
+        rtaSfHeader.style.display = 'none';
+        sfTotal.style.display = 'none';
+        rtaSfTotal.style.display = 'none';
+
+        // Toggle Formula card
+        formulaWithSf.classList.add('hidden');
+        formulaWithoutSf.classList.remove('hidden');
+      } else {
+        sfHeader.style.display = '';
+        rtaSfHeader.style.display = '';
+        sfTotal.style.display = '';
+        rtaSfTotal.style.display = '';
+
+        // Toggle Formula card
+        formulaWithSf.classList.remove('hidden');
+        formulaWithoutSf.classList.add('hidden');
+      }
+
+      renderTable();
+    }
+
+    function addNewRow() {
+      schoolData.push({ id: Date.now() + Math.random(), name: '', cl: '', abc: '', rta: '' });
+      renderTable();
+    }
+
+    function removeRow(index) {
+      if (schoolData.length > 1) {
+        schoolData.splice(index, 1);
+      } else {
+        schoolData = [{ id: Date.now(), name: '', cl: '', abc: '', rta: '' }];
+      }
+      renderTable();
+    }
+
+    function clearAllData() {
+      document.getElementById('lgu-name').value = '';
+      schoolData = [{ id: Date.now(), name: '', cl: '', abc: '', rta: '' }];
+      renderTable();
+    }
+
+    function handleFormattedInput(inputElem, index, field) {
+      const rawVal = inputElem.value;
+      const cursorPosition = inputElem.selectionStart;
+      const origLength = rawVal.length;
+
+      const formatted = formatNumberWithCommas(rawVal);
+      inputElem.value = formatted;
+
+      const newLength = formatted.length;
+      const diff = newLength - origLength;
+      inputElem.setSelectionRange(cursorPosition + diff, cursorPosition + diff);
+
+      schoolData[index][field] = formatted;
+      calculateAndRefresh();
+    }
+
+    // Excel Clipboard Paste Engine
+    function handlePaste(event, startRowIdx, startColField) {
+      const clipboardData = event.clipboardData || window.clipboardData;
+      const pastedText = clipboardData.getData('text');
+
+      if (!pastedText) return;
+
+      const fieldOrder = ['name', 'cl', 'abc', 'rta'];
+      const startColIdx = fieldOrder.indexOf(startColField);
+
+      // Parse tab-separated and newline-separated values
+      const rows = pastedText.split(/\r\n|\n|\r/);
+      if (rows.length === 0) return;
+
+      const isMultiCell = rows.length > 1 || rows[0].includes('\t');
+      if (!isMultiCell) return;
+
+      event.preventDefault();
+
+      rows.forEach((rowText, rOffset) => {
+        if (!rowText.trim() && rOffset === rows.length - 1) return;
+
+        const cols = rowText.split('\t');
+        const targetRowIdx = startRowIdx + rOffset;
+
+        while (schoolData.length <= targetRowIdx) {
+          schoolData.push({ id: Date.now() + Math.random(), name: '', cl: '', abc: '', rta: '' });
+        }
+
+        cols.forEach((colVal, cOffset) => {
+          const targetColIdx = startColIdx + cOffset;
+          if (targetColIdx < fieldOrder.length) {
+            const fieldName = fieldOrder[targetColIdx];
+            let cleanVal = colVal.trim();
+
+            if (fieldName !== 'name') {
+              cleanVal = formatNumberWithCommas(cleanVal);
+            }
+            schoolData[targetRowIdx][fieldName] = cleanVal;
+          }
+        });
+      });
+
+      renderTable();
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('school-table-body');
+      tbody.innerHTML = '';
+
+      schoolData.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 transition';
+        tr.dataset.idx = idx;
+
+        const clNum = parseNum(row.cl);
+        const abcNum = parseNum(row.abc);
+        const rtaNum = parseNum(row.rta);
+
+        const sfVal = currentMode === 'WITH_SF' ? clNum * SF_RATE_PER_CL : 0;
+        const rtaLessSf = Math.max(0, rtaNum - sfVal);
+        const eaoVal = currentMode === 'WITH_SF' ? rtaLessSf * EAO_RATE : rtaNum * EAO_RATE;
+        const totalAlloc = rtaNum + eaoVal;
+        const trancheAlloc = (rtaNum * TRANCHE_RATE) + eaoVal;
+
+        const isOver = totalAlloc > abcNum && abcNum > 0;
+        if (isOver) {
+          tr.classList.add('bg-rose-50/70');
+        }
+
+        tr.innerHTML = `
+          <td class="p-2">
+            <input type="text" value="${row.name || ''}" 
+              oninput="schoolData[${idx}].name = this.value; calculateAndRefresh();" 
+              onpaste="handlePaste(event, ${idx}, 'name')"
+              placeholder="School Name" class="w-full border border-slate-300 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-deped-blue">
+          </td>
+          <td class="p-2 text-center">
+            <input type="text" value="${row.cl || ''}" 
+              oninput="handleFormattedInput(this, ${idx}, 'cl')" 
+              onpaste="handlePaste(event, ${idx}, 'cl')"
+              placeholder="0" class="w-full text-center border border-slate-300 rounded px-1 py-1 outline-none focus:ring-1 focus:ring-deped-blue">
+          </td>
+          <td class="p-2 text-right">
+            <input type="text" value="${row.abc || ''}" 
+              oninput="handleFormattedInput(this, ${idx}, 'abc')" 
+              onpaste="handlePaste(event, ${idx}, 'abc')"
+              placeholder="0.00" class="w-full text-right border border-slate-300 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-deped-blue">
+          </td>
+          <td class="p-2 text-right">
+            <input type="text" value="${row.rta || ''}" 
+              oninput="handleFormattedInput(this, ${idx}, 'rta')" 
+              onpaste="handlePaste(event, ${idx}, 'rta')"
+              placeholder="0.00" class="w-full text-right border border-slate-300 rounded px-2 py-1 outline-none focus:ring-1 focus:ring-deped-blue">
+          </td>
+          ${currentMode === 'WITH_SF' ? `<td class="cell-sf p-3 text-right font-mono text-slate-600">${formatCurrency(sfVal)}</td>` : ''}
+          ${currentMode === 'WITH_SF' ? `<td class="cell-rtasf p-3 text-right font-mono text-slate-600">${formatCurrency(rtaLessSf)}</td>` : ''}
+          <td class="cell-eao p-3 text-right font-mono text-slate-600">${formatCurrency(eaoVal)}</td>
+          <td class="cell-total p-3 text-right font-mono font-black bg-amber-50/80 text-amber-950 border-x border-amber-200/80">${formatCurrency(totalAlloc)}</td>
+          <td class="cell-tranche p-3 text-right font-mono font-black text-deped-blue bg-blue-50/50">${formatCurrency(trancheAlloc)}</td>
+          <td class="p-2 text-center no-print">
+            <button onclick="removeRow(${idx})" class="text-deped-red hover:text-rose-800 font-bold px-2 py-1">✕</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      calculateAndRefresh();
+    }
+
+    function calculateAndRefresh() {
+      let gCl = 0, gAbc = 0, gRta = 0, gSf = 0, gRtaSf = 0, gEao = 0, gTotalAlloc = 0, gTrancheAlloc = 0;
+
+      const tbody = document.getElementById('school-table-body');
+      const rows = tbody.querySelectorAll('tr');
+
+      rows.forEach((tr, idx) => {
+        const row = schoolData[idx];
+        if (!row) return;
+
+        const clNum = parseNum(row.cl);
+        const abcNum = parseNum(row.abc);
+        const rtaNum = parseNum(row.rta);
+
+        const sfVal = currentMode === 'WITH_SF' ? clNum * SF_RATE_PER_CL : 0;
+        const rtaLessSf = Math.max(0, rtaNum - sfVal);
+        const eaoVal = currentMode === 'WITH_SF' ? rtaLessSf * EAO_RATE : rtaNum * EAO_RATE;
+        const totalAlloc = rtaNum + eaoVal;
+        const trancheAlloc = (rtaNum * TRANCHE_RATE) + eaoVal;
+
+        gCl += clNum;
+        gAbc += abcNum;
+        gRta += rtaNum;
+        gSf += sfVal;
+        gRtaSf += rtaLessSf;
+        gEao += eaoVal;
+        gTotalAlloc += totalAlloc;
+        gTrancheAlloc += trancheAlloc;
+
+        const cellSf = tr.querySelector('.cell-sf');
+        const cellRtaSf = tr.querySelector('.cell-rtasf');
+        const cellEao = tr.querySelector('.cell-eao');
+        const cellTotal = tr.querySelector('.cell-total');
+        const cellTranche = tr.querySelector('.cell-tranche');
+
+        if (cellSf) cellSf.innerText = formatCurrency(sfVal);
+        if (cellRtaSf) cellRtaSf.innerText = formatCurrency(rtaLessSf);
+        if (cellEao) cellEao.innerText = formatCurrency(eaoVal);
+        if (cellTotal) cellTotal.innerText = formatCurrency(totalAlloc);
+        if (cellTranche) cellTranche.innerText = formatCurrency(trancheAlloc);
+
+        const isOver = totalAlloc > abcNum && abcNum > 0;
+        if (isOver) {
+          tr.className = 'hover:bg-slate-50 transition bg-rose-50/70';
+          if (cellTotal) cellTotal.className = 'cell-total p-3 text-right font-mono font-black bg-rose-100 text-deped-red border-x border-rose-200';
+        } else {
+          tr.className = 'hover:bg-slate-50 transition';
+          if (cellTotal) cellTotal.className = 'cell-total p-3 text-right font-mono font-black bg-amber-50/80 text-amber-950 border-x border-amber-200/80';
+        }
+      });
+
+      document.getElementById('total-cl').innerText = gCl.toLocaleString('en-US');
+      document.getElementById('total-abc').innerText = formatCurrency(gAbc);
+      document.getElementById('total-rta').innerText = formatCurrency(gRta);
+      if (currentMode === 'WITH_SF') {
+        document.getElementById('total-sf').innerText = formatCurrency(gSf);
+        document.getElementById('total-rta-sf').innerText = formatCurrency(gRtaSf);
+      }
+      document.getElementById('total-eao').innerText = formatCurrency(gEao);
+      document.getElementById('total-project-alloc').innerText = formatCurrency(gTotalAlloc);
+      document.getElementById('total-tranche-alloc').innerText = formatCurrency(gTrancheAlloc);
+
+      // Top Summary Metric Cards
+      document.getElementById('summary-abc').innerText = formatCurrency(gAbc);
+      document.getElementById('summary-rta').innerText = formatCurrency(gRta);
+      document.getElementById('summary-alloc').innerText = formatCurrency(gTotalAlloc);
+      document.getElementById('summary-tranche').innerText = formatCurrency(gTrancheAlloc);
+
+      // Validation Status
+      const isValid = gTotalAlloc <= gAbc || gAbc === 0;
+      const statusBadgeCard = document.getElementById('status-badge-card');
+      const statusText = document.getElementById('summary-status');
+
+      if (isValid) {
+        statusBadgeCard.className = 'p-3 rounded-xl border bg-emerald-50 border-emerald-200 text-emerald-800 flex flex-col justify-center items-center shadow-sm';
+        statusText.innerText = 'VALID / PASS';
+      } else {
+        statusBadgeCard.className = 'p-3 rounded-xl border bg-rose-50 border-rose-200 text-deped-red flex flex-col justify-center items-center shadow-sm';
+        statusText.innerText = 'INVALID / OVER ABC';
+      }
+    }
+
+    function exportCSV() {
+      const lguName = document.getElementById('lgu-name').value || 'LGU';
+      let rows = [];
+
+      // CSV Header
+      if (currentMode === 'WITH_SF') {
+        rows.push(['School Name', '# OF CL', 'ABC Amount', 'RTA Amount', 'School Furniture', 'RTA Amount Less SF', 'EAO (LGU)', 'Total Fund Allocation', '1st Tranche Fund Allocation']);
+      } else {
+        rows.push(['School Name', '# OF CL', 'ABC Amount', 'RTA Amount', 'EAO (LGU)', 'Total Fund Allocation', '1st Tranche Fund Allocation']);
+      }
+
+      // Data Rows
+      schoolData.forEach(row => {
+        const clNum = parseNum(row.cl);
+        const abcNum = parseNum(row.abc);
+        const rtaNum = parseNum(row.rta);
+
+        const sfVal = currentMode === 'WITH_SF' ? clNum * SF_RATE_PER_CL : 0;
+        const rtaLessSf = Math.max(0, rtaNum - sfVal);
+        const eaoVal = currentMode === 'WITH_SF' ? rtaLessSf * EAO_RATE : rtaNum * EAO_RATE;
+        const totalAlloc = rtaNum + eaoVal;
+        const trancheAlloc = (rtaNum * TRANCHE_RATE) + eaoVal;
+
+        if (currentMode === 'WITH_SF') {
+          rows.push([
+            `"${(row.name || '').replace(/"/g, '""')}"`,
+            clNum,
+            abcNum.toFixed(2),
+            rtaNum.toFixed(2),
+            sfVal.toFixed(2),
+            rtaLessSf.toFixed(2),
+            eaoVal.toFixed(2),
+            totalAlloc.toFixed(2),
+            trancheAlloc.toFixed(2)
+          ]);
+        } else {
+          rows.push([
+            `"${(row.name || '').replace(/"/g, '""')}"`,
+            clNum,
+            abcNum.toFixed(2),
+            rtaNum.toFixed(2),
+            eaoVal.toFixed(2),
+            totalAlloc.toFixed(2),
+            trancheAlloc.toFixed(2)
+          ]);
+        }
+      });
+
+      // Grand Totals Row
+      let gCl = 0, gAbc = 0, gRta = 0, gSf = 0, gRtaSf = 0, gEao = 0, gTotalAlloc = 0, gTrancheAlloc = 0;
+      schoolData.forEach(row => {
+        const clNum = parseNum(row.cl);
+        const abcNum = parseNum(row.abc);
+        const rtaNum = parseNum(row.rta);
+
+        const sfVal = currentMode === 'WITH_SF' ? clNum * SF_RATE_PER_CL : 0;
+        const rtaLessSf = Math.max(0, rtaNum - sfVal);
+        const eaoVal = currentMode === 'WITH_SF' ? rtaLessSf * EAO_RATE : rtaNum * EAO_RATE;
+        const totalAlloc = rtaNum + eaoVal;
+        const trancheAlloc = (rtaNum * TRANCHE_RATE) + eaoVal;
+
+        gCl += clNum;
+        gAbc += abcNum;
+        gRta += rtaNum;
+        gSf += sfVal;
+        gRtaSf += rtaLessSf;
+        gEao += eaoVal;
+        gTotalAlloc += totalAlloc;
+        gTrancheAlloc += trancheAlloc;
+      });
+
+      if (currentMode === 'WITH_SF') {
+        rows.push(['"GRAND TOTAL"', gCl, gAbc.toFixed(2), gRta.toFixed(2), gSf.toFixed(2), gRtaSf.toFixed(2), gEao.toFixed(2), gTotalAlloc.toFixed(2), gTrancheAlloc.toFixed(2)]);
+      } else {
+        rows.push(['"GRAND TOTAL"', gCl, gAbc.toFixed(2), gRta.toFixed(2), gEao.toFixed(2), gTotalAlloc.toFixed(2), gTrancheAlloc.toFixed(2)]);
+      }
+
+      const csvString = rows.map(r => r.join(',')).join('\n');
+      const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `1st_Tranche_Calculator_${lguName.replace(/\s+/g, '_')}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Initialize View
+    switchMode('WITH_SF');
+  </script>
+</body>
+</html>
